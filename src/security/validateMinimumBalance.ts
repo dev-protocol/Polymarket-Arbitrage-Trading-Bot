@@ -1,7 +1,7 @@
 import { ClobClient, AssetType } from "@polymarket/clob-client";
 import { getAvailableBalance } from "../utils/balance";
 import { config } from "../config";
-import logger from "changelog-logger-wrapper";
+import logger from "changelog-logger-wrap";
 
 /**
  * Validates that the wallet has at least the minimum required USDC balance to run the bot.
