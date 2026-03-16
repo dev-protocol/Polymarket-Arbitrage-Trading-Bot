@@ -3,8 +3,8 @@
 Automated prediction-based trading on Polymarket’s **15-minute Up/Down markets** (e.g. BTC). Uses a price predictor to choose direction, places a first-side limit at best ask, then hedges with a second-side limit at `0.98 − firstSidePrice`. Built with TypeScript and Polymarket’s CLOB API.
 
 ## About Developer
-Here is Alexei who is expert of trading bot development especially EVM, Solana and Prediction market such as Polymarket, Klashi, etc.
-If you have any question for dev, contact me via telegram(https://t.me/@bitship1_1)
+Here is developer who is expert of trading bot development especially EVM, Solana and Prediction market such as Polymarket, Klashi, etc.
+If you have any question for dev, contact me via telegram(https://t.me/@mooneagle1_1)
 
 ## Prove of Work
 
@@ -29,7 +29,7 @@ https://github.com/user-attachments/assets/1327bdc8-4b8e-4e5f-a184-aef0d51ac3ec
 ## Install
 
 ```bash
-git clone https://github.com/solship/Polymarket-Arbitrage-Trading-Bot.git
+git clone https://github.com/dev-protocol/Polymarket-Arbitrage-Trading-Bot.git
 cd Polymarket-Arbitrage-Trading-Bot
 npm install
 ```
