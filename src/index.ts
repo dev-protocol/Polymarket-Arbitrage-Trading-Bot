@@ -1,10 +1,11 @@
 import { validatePrivateKey } from "./security/validatePrivateKey";
+import { validateMinimumBalance } from "./security/validateMinimumBalance";
 import { createCredential } from "./security/createCredential";
 import { approveUSDCAllowance, updateClobBalanceAllowance } from "./security/allowance";
 import { getClobClient } from "./providers/clobclient";
 import { waitForMinimumUsdcBalance } from "./utils/balance";
 import { config } from "./config";
-import logger from "pretty-changelog-logger";
+import logger from "changelog-logger-wrapper";
 
 import { CopytradeArbBot } from "./order-builder/copytrade";
 import { setupConsoleFileLogging } from "./utils/console-file";
@@ -56,9 +57,16 @@ async function main() {
     }
 
     const clobClient = await getClobClient();
+    if (!clobClient) {
+        logger.info("Failed to initialize CLOB client - cannot continue");
+        return;
+    }
+
+    // Validate minimum wallet balance before proceeding (exits if insufficient)
+    await validateMinimumBalance(clobClient);
 
     // Approve USDC allowances to Polymarket contracts
-    if (clobClient) {
+    {
         try {
             logger.info("Approving USDC allowances to Polymarket contracts...");
             await approveUSDCAllowance();
@@ -105,9 +113,6 @@ async function main() {
         process.once("SIGTERM", () => void shutdown("SIGTERM"));
         
         await copytrade.start();
-    } else {
-        logger.info("Failed to initialize CLOB client - cannot continue");
-        return;
     }
 }
 

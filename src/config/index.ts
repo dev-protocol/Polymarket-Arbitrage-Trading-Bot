@@ -67,6 +67,8 @@ export const config = {
     /** Bot runner settings */
     bot: {
         minUsdcBalance: envNumber("BOT_MIN_USDC_BALANCE", 1),
+        /** Minimum USDC balance (USD) required to start the bot. Bot exits if below this. */
+        minRunBalanceUsdc: envNumber("BOT_MIN_RUN_BALANCE_USDC", 50),
         waitForNextMarketStart: envBool("COPYTRADE_WAIT_FOR_NEXT_MARKET_START", false),
     },
 
