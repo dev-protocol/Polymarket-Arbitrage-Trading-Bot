@@ -1,2 +1,2 @@
-// Compatibility shim: old import path (`./order-builder/gabagool`) now re-exports copytrade bot.
-export { CopytradeArbBot as GabagoolArbBot } from "./copytrade";
+// Compatibility shim: old import path (`./order-builder/gabagool`) re-exports the trading bot.
+export { ArbTradingBot as GabagoolArbBot } from "./trading";

@@ -1,6 +1,6 @@
 import { Side, OrderType, UserMarketOrder, CreateOrderOptions } from "@polymarket/clob-client";
 import type { TradePayload } from "../utils/types";
-import type { CopyTradeOptions } from "./types";
+import type { TradeOptions } from "./types";
 
 /**
  * Convert trade side string to Side enum
@@ -48,7 +48,7 @@ export function calculateMarketOrderAmount(
 /**
  * Convert a trade payload to a UserMarketOrder
  */
-export function tradeToMarketOrder(options: CopyTradeOptions): UserMarketOrder {
+export function tradeToMarketOrder(options: TradeOptions): UserMarketOrder {
     const { trade, maxAmount, sizeMultiplier = 1.0, orderType = OrderType.FAK } = options;
     
     const side = parseTradeSide(trade.side);

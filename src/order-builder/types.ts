@@ -2,9 +2,9 @@ import { Side, OrderType, UserMarketOrder, CreateOrderOptions } from "@polymarke
 import type { TradePayload } from "../utils/types";
 
 /**
- * Options for copying a trade
+ * Options for placing a trade order
  */
-export interface CopyTradeOptions {
+export interface TradeOptions {
     /**
      * The trade payload to copy
      */
@@ -44,9 +44,9 @@ export interface CopyTradeOptions {
 }
 
 /**
- * Result of placing a copied trade order
+ * Result of placing a trade order
  */
-export interface CopyTradeResult {
+export interface TradeResult {
     /**
      * Whether the order was successfully placed
      */

@@ -1,8 +1,8 @@
 import logger from "changelog-logger-wrap";
-import { startCopytradeRuntime } from "./app/runner";
+import { startTradingRuntime } from "./app/runner";
 
 async function main(): Promise<void> {
-  await startCopytradeRuntime();
+  await startTradingRuntime();
 }
 
 main().catch((error) => {

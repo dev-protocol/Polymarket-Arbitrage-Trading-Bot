@@ -79,7 +79,7 @@ type SimpleConfig = {
     minBalanceUsdc: number; // Minimum balance before stopping
 };
 
-const STATE_FILE = "src/data/copytrade-state.json";
+const STATE_FILE = "src/data/bot-state.json";
 
 function statePath(): string {
     return path.resolve(process.cwd(), STATE_FILE);
@@ -140,7 +140,7 @@ function saveState(state: SimpleStateFile): void {
     }, 500); // Debounce saves by 500ms
 }
 
-export class CopytradeArbBot {
+export class ArbTradingBot {
     private lastSlugByMarket: Record<string, string> = {};
     private tokenIdsByMarket: Record<
         string,
@@ -190,17 +190,17 @@ export class CopytradeArbBot {
 
     constructor(private client: ClobClient, private cfg: SimpleConfig) {
         // Initialize MAX_BUY_COUNTS_PER_SIDE from config
-        this.MAX_BUY_COUNTS_PER_SIDE = config.copytrade.maxBuyCountsPerSide;
+        this.MAX_BUY_COUNTS_PER_SIDE = config.trading.maxBuyCountsPerSide;
         // Initialize WebSocket orderbook (store promise for later awaiting)
         this.initializationPromise = this.initializeWebSocket();
     }
 
-    static async fromEnv(client: ClobClient): Promise<CopytradeArbBot> {
+    static async fromEnv(client: ClobClient): Promise<ArbTradingBot> {
         const {
             markets, sharesPerSide, tickSize, negRisk,
             priceBuffer, fireAndForget, minBalanceUsdc
-        } = config.copytrade;
-        const bot = new CopytradeArbBot(client, {
+        } = config.trading;
+        const bot = new ArbTradingBot(client, {
             markets, sharesPerSide, tickSize: tickSize as CreateOrderOptions["tickSize"],
             negRisk, priceBuffer, fireAndForget, minBalanceUsdc,
         });
@@ -268,7 +268,7 @@ export class CopytradeArbBot {
         if (this.wsOrderBook) {
             this.wsOrderBook.disconnect();
         }
-        logger.info("CopytradeArbBot stopped");
+        logger.info("ArbTradingBot stopped");
     }
 
     private async initializeMarkets(): Promise<void> {

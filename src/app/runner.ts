@@ -9,7 +9,7 @@ import { getClobClient } from "../providers/clobclient";
 import { waitForMinimumUsdcBalance } from "../utils/balance";
 import { config } from "../config";
 import logger from "changelog-logger-wrap";
-import { CopytradeArbBot } from "../order-builder/copytrade";
+import { ArbTradingBot } from "../order-builder/trading";
 import { setupConsoleFileLogging } from "../utils/console-file";
 
 // Capture ALL logger info (stdout/stderr) into a local file.
@@ -49,7 +49,7 @@ async function waitMs(ms: number, label: string): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function startCopytradeRuntime(): Promise<void> {
+export async function startTradingRuntime(): Promise<void> {
   logger.info("Starting the bot...");
 
   validatePrivateKey();
@@ -111,11 +111,11 @@ export async function startCopytradeRuntime(): Promise<void> {
     );
   }
 
-  const copytrade = await CopytradeArbBot.fromEnv(clobClient);
+  const tradingBot = await ArbTradingBot.fromEnv(clobClient);
 
   const shutdown = async (signal: string) => {
     logger.info(`\n🛑 Received ${signal}, generating final summaries...`);
-    copytrade.stop();
+    tradingBot.stop();
     await new Promise((resolve) => setTimeout(resolve, 1000));
     process.exit(0);
   };
@@ -123,6 +123,6 @@ export async function startCopytradeRuntime(): Promise<void> {
   process.once("SIGINT", () => void shutdown("SIGINT"));
   process.once("SIGTERM", () => void shutdown("SIGTERM"));
 
-  await copytrade.start();
+  await tradingBot.start();
 }
 

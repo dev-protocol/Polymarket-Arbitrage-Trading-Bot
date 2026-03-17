@@ -43,7 +43,7 @@ function shouldDropHoldingsForError(err?: string): boolean {
     return /don't hold any winning tokens/i.test(err);
 }
 
-type CopytradeStateRow = {
+type BotStateRow = {
     qtyYES: number;
     qtyNO: number;
     costYES: number;
@@ -57,11 +57,16 @@ type CopytradeStateRow = {
     downIdx?: number;
 };
 
-type CopytradeStateFile = Record<string, CopytradeStateRow>;
+type BotStateFile = Record<string, BotStateRow>;
 
-function copytradeStatePath(): string {
+function botStatePath(): string {
     // Use project-root-relative path so this works even if process cwd differs (e.g., pm2).
     // `__dirname` here is `<projectRoot>/src` when running via ts-node.
+    return path.resolve(__dirname, "..", "src/data/bot-state.json");
+}
+
+/** @deprecated Use botStatePath. Kept for migration from copytrade-state.json */
+function legacyCopytradeStatePath(): string {
     return path.resolve(__dirname, "..", "src/data/copytrade-state.json");
 }
 
@@ -92,24 +97,25 @@ function ensurePnlLogExists(): void {
     }
 }
 
-function loadCopytradeStateFile(): CopytradeStateFile {
-    const p = copytradeStatePath();
+function loadBotStateFile(): BotStateFile {
+    // Prefer bot-state.json, fall back to legacy copytrade-state.json for migration
+    const p = fs.existsSync(botStatePath()) ? botStatePath() : legacyCopytradeStatePath();
     if (!fs.existsSync(p)) return {};
     try {
         const raw = fs.readFileSync(p, "utf8").trim();
         if (!raw) return {};
-        return JSON.parse(raw) as CopytradeStateFile;
+        return JSON.parse(raw) as BotStateFile;
     } catch (e) {
-        logger.error(`Failed to read copytrade-state.json for pnl: ${e instanceof Error ? e.message : String(e)}`);
+        logger.error(`Failed to read bot state file for pnl: ${e instanceof Error ? e.message : String(e)}`);
         return {};
     }
 }
 
 function pickBestStateRowForConditionId(
-    state: CopytradeStateFile,
+    state: BotStateFile,
     conditionId: string
-): { key: string; row: CopytradeStateRow } | null {
-    let best: { key: string; row: CopytradeStateRow; score: number } | null = null;
+): { key: string; row: BotStateRow } | null {
+    let best: { key: string; row: BotStateRow; score: number } | null = null;
     for (const [key, row] of Object.entries(state)) {
         if (!row || row.conditionId !== conditionId) continue;
         const score = Date.parse(row.lastUpdatedIso || "") || 0;
@@ -119,7 +125,7 @@ function pickBestStateRowForConditionId(
 }
 
 async function recordPnlForRedeemedCondition(conditionId: string, balanceAfterRedeem?: number): Promise<void> {
-    const state = loadCopytradeStateFile();
+    const state = loadBotStateFile();
     const picked = pickBestStateRowForConditionId(state, conditionId);
     if (!picked) {
         const balanceStr = balanceAfterRedeem !== undefined ? ` balance=${balanceAfterRedeem.toFixed(6)}` : "";
@@ -130,7 +136,7 @@ async function recordPnlForRedeemedCondition(conditionId: string, balanceAfterRe
     }
 
     const { key, row } = picked;
-    const slug = row.slug || key.replace(/^copytrade:/, "");
+    const slug = row.slug || key.replace(/^(trading:|copytrade:)/, "");
     const market = row.market || slug.split("-")[0] || "?";
     const cost = (row.costYES || 0) + (row.costNO || 0);
 
@@ -176,25 +182,25 @@ async function recordPnlForRedeemedCondition(conditionId: string, balanceAfterRe
     appendPnlLogLine(logParts.join(" "));
 }
 
-function extractStartSecFromCopytradeKey(key: string): number | null {
-    // key format: copytrade:<market>-updown-15m-<startSec>
+function extractStartSecFromStateKey(key: string): number | null {
+    // key format: <market>-updown-15m-<startSec> or trading:|copytrade:<market>-updown-15m-<startSec>
     const match = key.match(/-(\d{9,})$/);
     if (!match) return null;
     const n = Number(match[1]);
     return Number.isFinite(n) ? n : null;
 }
 
-function pruneCopytradeStateKeepNewest(keep: number): void {
-    const p = copytradeStatePath();
+function pruneBotStateKeepNewest(keep: number): void {
+    const p = fs.existsSync(botStatePath()) ? botStatePath() : legacyCopytradeStatePath();
     if (!fs.existsSync(p)) return;
 
-    let state: CopytradeStateFile;
+    let state: BotStateFile;
     try {
         const raw = fs.readFileSync(p, "utf8").trim();
         if (!raw) return;
-        state = JSON.parse(raw) as CopytradeStateFile;
+        state = JSON.parse(raw) as BotStateFile;
     } catch (e) {
-        logger.error(`Failed to read copytrade-state.json for pruning: ${e instanceof Error ? e.message : String(e)}`);
+        logger.error(`Failed to read bot state file for pruning: ${e instanceof Error ? e.message : String(e)}`);
         return;
     }
 
@@ -202,7 +208,7 @@ function pruneCopytradeStateKeepNewest(keep: number): void {
     if (keys.length <= keep) return;
 
     const scored = keys.map((k) => {
-        const startSec = extractStartSecFromCopytradeKey(k);
+        const startSec = extractStartSecFromStateKey(k);
         const iso = state[k]?.lastUpdatedIso;
         const isoMs = iso ? Date.parse(iso) : NaN;
         // Prefer startSec (market start), fallback to lastUpdatedIso
@@ -214,7 +220,7 @@ function pruneCopytradeStateKeepNewest(keep: number): void {
     const keepSet = new Set(scored.slice(0, Math.max(0, keep)).map((x) => x.k));
 
     let removed = 0;
-    const pruned: CopytradeStateFile = {};
+    const pruned: BotStateFile = {};
     for (const k of scored.map((x) => x.k)) {
         if (keepSet.has(k)) pruned[k] = state[k];
         else removed++;
@@ -223,9 +229,9 @@ function pruneCopytradeStateKeepNewest(keep: number): void {
     if (removed <= 0) return;
     try {
         fs.writeFileSync(p, JSON.stringify(pruned, null, 2));
-        logger.info(`Pruned copytrade-state.json removed=${removed} kept=${Object.keys(pruned).length}`);
+        logger.info(`Pruned bot state file removed=${removed} kept=${Object.keys(pruned).length}`);
     } catch (e) {
-        logger.error(`Failed to write pruned copytrade-state.json: ${e instanceof Error ? e.message : String(e)}`);
+        logger.error(`Failed to write pruned bot state file: ${e instanceof Error ? e.message : String(e)}`);
     }
 }
 
@@ -318,10 +324,10 @@ async function main() {
                 }
             }
 
-            // Keep copytrade state file small so bot startup stays fast.
+            // Keep bot state file small so bot startup stays fast.
             // Prune after redeem run (whether or not we redeemed anything).
             if (!dryRun) {
-                pruneCopytradeStateKeepNewest(Math.max(0, keepState));
+                pruneBotStateKeepNewest(Math.max(0, keepState));
             }
         } catch (e) {
             logger.error("redeem-holdings run failed", e);
