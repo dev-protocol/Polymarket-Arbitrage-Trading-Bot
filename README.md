@@ -1,112 +1,87 @@
-# Polymarket Arbitrage Trading Bot
-
-Automated prediction-based trading on Polymarket’s **15-minute Up/Down markets** (e.g. BTC). Uses a price predictor to choose direction, places a first-side limit at best ask, then hedges with a second-side limit at `0.98 − firstSidePrice`. Built with TypeScript and Polymarket’s CLOB API.
-
-## About Developer
-Here is developer who is expert of trading bot development especially EVM, Solana and Prediction market such as Polymarket, Klashi, etc.
-If you have any question for dev, contact me via telegram(https://t.me/@mooneagle1_1)
-
-## Prove of Work
-
-
-
-https://github.com/user-attachments/assets/1327bdc8-4b8e-4e5f-a184-aef0d51ac3ec
-
-
-
 ## Overview
 
-- **Strategy**: Predict Up/Down from live orderbook via an adaptive price predictor; buy the predicted side at best ask (GTC), then place the opposite side at `0.98 − firstSidePrice` (GTC).
-- **Markets**: Configurable list (e.g. `btc`); slugs are resolved as `{market}-updown-15m-{startOf15mUnix}` via Gamma API.
-- **Stack**: TypeScript, Node (or Bun), `@polymarket/clob-client`, WebSocket orderbook, Ethers.js for allowances/redemption.
+- **Core idea**: Automated market-making and copytrading on short-duration prediction markets using Polymarket’s CLOB.
+- **Execution loop**: Connects to the orderbook, derives a directional signal, places a lead order, then manages the opposite side as a hedge with configurable risk parameters.
+- **Runtime**: Long‑lived process that continuously monitors balances, allowances and market status, and exits gracefully on shutdown.
 
 ## Requirements
 
-- Node.js 18+ (or Bun)
-- Polygon wallet with USDC
-- RPC URL for Polygon (e.g. Alchemy) for allowances and redemption
+- Node.js 18+ (recommended)
+- Polygon wallet funded with USDC
+- Polygon RPC endpoint (for approvals/redemptions)
 
-## Install
+## Installation
+
+Clone or copy this repository into your own workspace (no external remote is required):
 
 ```bash
-git clone https://github.com/dev-protocol/Polymarket-Arbitrage-Trading-Bot.git
-cd Polymarket-Arbitrage-Trading-Bot
+cd polymarket-copytrade-bot
 npm install
 ```
 
 ## Configuration
 
-Copy the example env and set at least `PRIVATE_KEY` and `COPYTRADE_MARKETS`:
+Create a `.env` file in the project root (you can base it on any existing template you have) and set at least your private key and the markets you want to participate in.
 
-```bash
-cp .env.temp .env
-```
+### Important environment variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PRIVATE_KEY` | Wallet private key | **required** |
-| `COPYTRADE_MARKETS` | Comma-separated markets (e.g. `btc`) | `btc` |
-| `COPYTRADE_SHARES` | Shares per side per trade | `5` |
-| `COPYTRADE_TICK_SIZE` | Price precision | `0.01` |
-| `COPYTRADE_PRICE_BUFFER` | Price buffer for execution | `0` |
-| `COPYTRADE_WAIT_FOR_NEXT_MARKET_START` | Wait for next 15m boundary before starting | `false` |
-| `COPYTRADE_MAX_BUY_COUNTS_PER_SIDE` | Max buys per side per market (0 = no cap) | `0` |
-| `CHAIN_ID` | Chain ID (Polygon) | `137` |
-| `CLOB_API_URL` | CLOB API base URL | `https://clob.polymarket.com` |
-| `RPC_URL` / `RPC_TOKEN` | RPC for allowances/redemption | — |
-| `BOT_MIN_USDC_BALANCE` | Min USDC to start | `1` |
-| `LOG_DIR` / `LOG_FILE_PREFIX` | Log directory and file prefix | `logs` / `bot` |
+| Variable | Description |
+|----------|-------------|
+| `PRIVATE_KEY` | Polygon wallet private key (never share this). |
+| `COPYTRADE_MARKETS` | Comma‑separated markets (e.g. `btc`). |
+| `COPYTRADE_SHARES` | Shares per side per trade. |
+| `COPYTRADE_TICK_SIZE` | Price precision. |
+| `COPYTRADE_PRICE_BUFFER` | Optional execution buffer. |
+| `COPYTRADE_WAIT_FOR_NEXT_MARKET_START` | Whether to align with the next 15‑minute boundary before starting. |
+| `COPYTRADE_MAX_BUY_COUNTS_PER_SIDE` | Max buys per side per market (`0` = unlimited). |
+| `CHAIN_ID` | EVM chain id (Polygon mainnet is `137`). |
+| `CLOB_API_URL` | Base URL for the CLOB API. |
+| `RPC_URL` / `RPC_TOKEN` | RPC endpoint details for approvals/redemptions. |
+| `BOT_MIN_USDC_BALANCE` | Minimum USDC balance required to start trading. |
+| `LOG_DIR` / `LOG_FILE_PREFIX` / `LOG_FILE_PATH` | Logging configuration for local files. |
 
-API credentials are created on first run and stored in `src/data/credential.json`.
+API credentials are generated on first run and stored locally under `src/data/`.
 
-## Usage
+## Running the bot
 
-**Run the bot**
+Start the trading runtime:
 
 ```bash
 npm start
-# or: bun src/index.ts
 ```
 
-**Redemption**
+Redeem resolved markets and manage holdings using the provided scripts:
 
 ```bash
-# Auto-redeem resolved markets (holdings file)
-npm run redeem:holdings
-# or: bun src/auto-redeem.ts [--dry-run] [--clear-holdings] [--api] [--max N]
-
-# Redeem by condition ID
 npm run redeem
-# or: bun src/redeem.ts [conditionId] [indexSets...]
-bun src/redeem.ts --check <conditionId>
+npm run redeem:holdings
 ```
 
-**Development**
+## Development workflow
 
 ```bash
 npx tsc --noEmit
-bun --watch src/index.ts
+npx ts-node src/index.ts
 ```
 
-## Project structure
+## Architecture
 
-| Path | Role |
-|------|------|
-| `src/index.ts` | Entry: credentials, CLOB, allowances, min balance, start `CopytradeArbBot`. |
-| `src/config/index.ts` | Loads `.env` and exposes config (chain, CLOB, copytrade, logging). |
-| `src/order-builder/copytrade.ts` | **CopytradeArbBot**: 15m slug resolution, WebSocket orderbook, predictor → first-side buy + second-side hedge; state in `src/data/copytrade-state.json`. |
-| `src/providers/clobclient.ts` | CLOB client singleton (credentials + `PRIVATE_KEY`). |
-| `src/providers/websocketOrderbook.ts` | WebSocket to Polymarket CLOB market channel; best bid/ask by token ID. |
-| `src/utils/pricePredictor.ts` | **AdaptivePricePredictor**: direction, confidence, signal (BUY_UP / BUY_DOWN / HOLD). |
-| `src/utils/redeem.ts` | CTF redemption, resolution checks, auto-redeem from holdings or API. |
-| `src/security/allowance.ts` | USDC and CTF approvals. |
-| `src/data/token-holding.json` | Token holdings for redemption (generated). |
-| `src/data/copytrade-state.json` | Per-slug state (prices, timestamps, buy counts). |
+At a high level the runtime is split into three layers:
 
-## Risk and disclaimer
+- **Application runtime**
+  - `src/app/runner.ts`: High‑level orchestration. Validates configuration and credentials, ensures minimum USDC balance, synchronizes allowances with the CLOB API, and starts the trading engine. This is the main place to look if you want to understand the boot sequence.
+  - `src/index.ts`: Thin entrypoint that just delegates to the application runner.
 
-Trading prediction markets involves significant risk. This software is provided as-is. Use at your own discretion and only with funds you can afford to lose.
+- **Infrastructure & integration**
+  - `src/config/…`: Loads `.env` and exposes strongly‑typed configuration for the rest of the app.
+  - `src/providers/…`: Connectivity to Polymarket CLOB (HTTP/WebSocket) and other external services.
+  - `src/security/…`: Wallet safety checks, minimum balance validation and allowance management.
+  - `src/utils/…`: Shared utilities such as balance polling, logging helpers and redemption helpers.
+  - `src/data/…`: Local JSON state and credentials written at runtime.
 
-## License
+- **Strategy engine**
+  - `src/order-builder/copytrade.ts`: Implements the copytrade arbitrage strategy, including market slug resolution, price prediction and order placement.
 
-ISC
+## Disclaimer
+
+This software is experimental trading infrastructure. Use it at your own risk and only with funds you can afford to lose. The maintainers are not responsible for any financial losses, misconfigurations or downtime.
