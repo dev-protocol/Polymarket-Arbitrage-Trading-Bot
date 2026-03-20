@@ -8,9 +8,13 @@ An automated prediction market trading bot that operates on Polymarket’s short
 
 
 
+https://github.com/user-attachments/assets/dc0c18df-bdcb-4fcf-9b81-e4620fbed6bb
+
+
+
 ## Private version bot profile
 
-
+[![Prevaite version Bot Profile](https://github.com/user-attachments/assets/cae20e42-cb84-4385-9558-91a770b00c98)](https://polymarket.com/@MangoTrolley7)
 
 ## Overview
 
