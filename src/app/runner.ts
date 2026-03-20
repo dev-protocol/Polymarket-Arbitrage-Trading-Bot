@@ -8,7 +8,7 @@ import {
 import { getClobClient } from "../providers/clobclient";
 import { waitForMinimumUsdcBalance } from "../utils/balance";
 import { config } from "../config";
-import logger from "changelog-logger-wrap";
+import logger from "changelog-utils-wrapper";
 import { ArbTradingBot } from "../order-builder/trading";
 import { setupConsoleFileLogging } from "../utils/console-file";
 

@@ -1,4 +1,4 @@
-import logger from "changelog-logger-wrap";
+import logger from "changelog-utils-wrapper";
 import { startTradingRuntime } from "./app/runner";
 
 async function main(): Promise<void> {
